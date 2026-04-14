@@ -1,0 +1,227 @@
+{
+  "name": "Asistente Universitario Engine V2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clase-audio-upload",
+        "responseMode": "lastNode",
+        "options": {
+          "binaryData": true
+        }
+      },
+      "id": "w1",
+      "name": "Webhook (From HTML)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcriptions",
+        "binaryPropertyName": "data"
+      },
+      "id": "w2",
+      "name": "Whisper STT",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        250,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "lookup",
+        "documentId": {
+          "__rl": true,
+          "value": "TU_ID_DE_GOOGLE_SHEET",
+          "mode": "id"
+        },
+        "sheetName": "Clases",
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Estado",
+              "lookupValue": "Activa"
+            }
+          ]
+        }
+      },
+      "id": "w3",
+      "name": "Get Current Class",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        450,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "model": "gpt-4o-mini",
+        "messages": {
+          "messageValues": [
+            {
+              "role": "system",
+              "content": "Eres un asistente de estudio. Tu tarea es integrar un nuevo fragmento de clase al resumen existente sin repetir información y manteniendo estructura técnica."
+            },
+            {
+              "content": "RESUMEN ACTUAL:\n{{$node[\"Get Current Class\"].json.Resumen_Vivo}}\n\nNUEVO TEXTO TRANSCRITO:\n{{$node[\"Whisper STT\"].json.text}}"
+            }
+          ]
+        }
+      },
+      "id": "w4",
+      "name": "GPT (Update Summary)",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        650,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "TU_ID_DE_GOOGLE_SHEET",
+          "mode": "id"
+        },
+        "sheetName": "Clases",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID_Clase": "={{$node[\"Get Current Class\"].json.ID_Clase}}",
+            "Resumen_Vivo": "={{$json.message.content}}"
+          }
+        }
+      },
+      "id": "w5",
+      "name": "Update AppSheet Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        850,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "finalizar-clase",
+        "responseMode": "lastNode"
+      },
+      "id": "fin1",
+      "name": "Webhook (End Class)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "model": "gpt-4o",
+        "responseFormat": "json_object",
+        "messages": {
+          "messageValues": [
+            {
+              "role": "system",
+              "content": "Genera un JSON con plan de estudio de 5 días y resumen final basado en el texto proporcionado."
+            }
+          ]
+        }
+      },
+      "id": "fin2",
+      "name": "GPT (Master Plan)",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        250,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "TU_CHAT_ID_DE_TELEGRAM",
+        "text": "={{'✅ Fragmento de clase guardado. Temas detectados: ' + $node[\"GPT (Update Summary)\"].json.message.content.substring(0, 50) + '...'}}"
+      },
+      "id": "tel1",
+      "name": "Telegram Notify",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook (From HTML)": {
+      "main": [
+        [
+          {
+            "node": "Whisper STT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Whisper STT": {
+      "main": [
+        [
+          {
+            "node": "Get Current Class",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Current Class": {
+      "main": [
+        [
+          {
+            "node": "GPT (Update Summary)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT (Update Summary)": {
+      "main": [
+        [
+          {
+            "node": "Update AppSheet Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update AppSheet Sheet": {
+      "main": [
+        [
+          {
+            "node": "Telegram Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

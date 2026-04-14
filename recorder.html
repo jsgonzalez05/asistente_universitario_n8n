@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Recorder | Asistente Universitario</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        h1 { font-weight: 600; margin-bottom: 0.5rem; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 2rem; }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 99px;
+            background: rgba(255,255,255,0.05);
+            font-size: 0.8rem;
+            margin-bottom: 2rem;
+        }
+
+        .record-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+
+        .record-btn.recording {
+            background: #ef4444;
+            animation: pulse-red 2s infinite;
+        }
+
+        .timer { font-size: 2.5rem; font-weight: 300; margin: 1.5rem 0; color: #f1f5f9; }
+
+        .log {
+            margin-top: 1.5rem;
+            font-size: 0.75rem;
+            color: #64748b;
+            max-height: 80px;
+            overflow-y: auto;
+            text-align: left;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 12px;
+        }
+
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Clase en Vivo</h1>
+        <p>Grabación automatizada en bloques de 15 min.</p>
+        
+        <div id="status" class="status-badge">Esperando inicio...</div>
+
+        <div class="timer" id="timer">00:00</div>
+
+        <button id="recordBtn" class="record-btn">INICIAR</button>
+
+        <div class="log" id="log">
+            <div>> Sistema listo.</div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let startTime;
+        let timerInterval;
+        let fragmentCount = 1;
+        
+        // --- CONFIGURACIÓN ---
+        const WEBHOOK_URL = 'ESCRIBE_AQUI_TU_URL_DE_N8N'; 
+        const CHUNK_TIME_MS = 15 * 60 * 1000; // 15 minutos
+        // ---------------------
+
+        const recordBtn = document.getElementById('recordBtn');
+        const timerDisplay = document.getElementById('timer');
+        const statusDisplay = document.getElementById('status');
+        const logDisplay = document.getElementById('log');
+
+        function addLog(msg) {
+            const div = document.createElement('div');
+            div.innerText = `> ${msg}`;
+            logDisplay.prepend(div);
+        }
+
+        async function startRecording() {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                sendToN8n(audioBlob, fragmentCount);
+                audioChunks = [];
+                fragmentCount++;
+                
+                if (isRecording) {
+                    addLog("Reiniciando nuevo bloque...");
+                    mediaRecorder.start();
+                    resetTimer();
+                }
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            statusDisplay.innerText = "GRABANDO FRAGMENTO #" + fragmentCount;
+            addLog("Grabación iniciada.");
+            startTimer();
+            
+            // Ciclo de auto-corte cada 15 min
+            setTimeout(() => {
+                if(isRecording) mediaRecorder.stop();
+            }, CHUNK_TIME_MS);
+        }
+
+        async function sendToN8n(blob, index) {
+            addLog(`Enviando fragmento #${index} a n8n...`);
+            const formData = new FormData();
+            formData.append('audio', blob, `clase_parte_${index}.webm`);
+            
+            try {
+                const res = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+                if(res.ok) addLog(`✅ Fragmento #${index} guardado.`);
+            } catch (e) {
+                addLog(`❌ Error enviando: ${e.message}`);
+            }
+        }
+
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const diff = Date.now() - startTime;
+                const secs = Math.floor(diff / 1000) % 60;
+                const mins = Math.floor(diff / 1000 / 60);
+                timerDisplay.innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+            }, 1000);
+        }
+
+        function resetTimer() {
+            startTime = Date.now();
+        }
+
+        recordBtn.addEventListener('click', () => {
+            if (!isRecording) {
+                startRecording();
+                recordBtn.classList.add('recording');
+                recordBtn.innerText = "PARAR";
+            } else {
+                isRecording = false;
+                mediaRecorder.stop();
+                clearInterval(timerInterval);
+                recordBtn.classList.remove('recording');
+                recordBtn.innerText = "INICIAR";
+                statusDisplay.innerText = "Finalizado.";
+            }
+        });
+    </script>
+</body>
+</html>
