@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -34,17 +35,28 @@
             text-align: center;
             width: 90%;
             max-width: 400px;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        h1 { font-weight: 600; margin-bottom: 0.5rem; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 2rem; }
+        h1 {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
 
         .status-badge {
             display: inline-block;
             padding: 0.5rem 1rem;
             border-radius: 99px;
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             font-size: 0.8rem;
             margin-bottom: 2rem;
         }
@@ -71,7 +83,12 @@
             animation: pulse-red 2s infinite;
         }
 
-        .timer { font-size: 2.5rem; font-weight: 300; margin: 1.5rem 0; color: #f1f5f9; }
+        .timer {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin: 1.5rem 0;
+            color: #f1f5f9;
+        }
 
         .log {
             margin-top: 1.5rem;
@@ -80,24 +97,36 @@
             max-height: 80px;
             overflow-y: auto;
             text-align: left;
-            background: rgba(0,0,0,0.2);
+            background: rgba(0, 0, 0, 0.2);
             padding: 10px;
             border-radius: 12px;
         }
 
         @keyframes pulse-red {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
         }
     </style>
 </head>
+
 <body>
 
     <div class="container">
         <h1>Clase en Vivo</h1>
         <p>Grabación automatizada en bloques de 15 min.</p>
-        
+
         <div id="status" class="status-badge">Esperando inicio...</div>
 
         <div class="timer" id="timer">00:00</div>
@@ -116,10 +145,12 @@
         let startTime;
         let timerInterval;
         let fragmentCount = 1;
-        
+
         // --- CONFIGURACIÓN ---
-        const WEBHOOK_URL = 'ESCRIBE_AQUI_TU_URL_DE_N8N'; 
-        const CHUNK_TIME_MS = 15 * 60 * 1000; // 15 minutos
+        const BASE_URL = 'http://localhost:5678/webhook-test';
+        const WEBHOOK_FRAGMENT = BASE_URL + '/clase-audio-upload';
+        const WEBHOOK_END = BASE_URL + '/finalizar-clase';
+        const CHUNK_TIME_MS = 10 * 1000; // 10 segundos (para pruebas)
         // ---------------------
 
         const recordBtn = document.getElementById('recordBtn');
@@ -133,6 +164,8 @@
             logDisplay.prepend(div);
         }
 
+        let chunkInterval;
+
         async function startRecording() {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
@@ -145,12 +178,15 @@
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                 sendToN8n(audioBlob, fragmentCount);
                 audioChunks = [];
-                fragmentCount++;
-                
+
                 if (isRecording) {
                     addLog("Reiniciando nuevo bloque...");
+                    fragmentCount++;
                     mediaRecorder.start();
                     resetTimer();
+                } else {
+                    addLog("Grabación detenida. Cerrando sesión...");
+                    finalizeClass();
                 }
             };
 
@@ -159,26 +195,41 @@
             statusDisplay.innerText = "GRABANDO FRAGMENTO #" + fragmentCount;
             addLog("Grabación iniciada.");
             startTimer();
-            
-            // Ciclo de auto-corte cada 15 min
-            setTimeout(() => {
-                if(isRecording) mediaRecorder.stop();
+
+            // Ciclo de auto-corte cada X ms
+            chunkInterval = setInterval(() => {
+                if (isRecording && mediaRecorder.state === "recording") {
+                    mediaRecorder.stop();
+                }
             }, CHUNK_TIME_MS);
         }
 
         async function sendToN8n(blob, index) {
             addLog(`Enviando fragmento #${index} a n8n...`);
-            const formData = new FormData();
-            formData.append('audio', blob, `clase_parte_${index}.webm`);
-            
             try {
-                const res = await fetch(WEBHOOK_URL, {
+                // Enviamos el audio puro para que Gemini lo acepte correctamente
+                const res = await fetch(WEBHOOK_FRAGMENT, {
                     method: 'POST',
-                    body: formData
+                    headers: { 'Content-Type': 'audio/webm' },
+                    body: blob
                 });
-                if(res.ok) addLog(`✅ Fragmento #${index} guardado.`);
+                if (res.ok) addLog(`✅ Fragmento #${index} guardado.`);
             } catch (e) {
                 addLog(`❌ Error enviando: ${e.message}`);
+            }
+        }
+
+        async function finalizeClass() {
+            addLog("Finalizando sesión de clase en n8n...");
+            try {
+                const res = await fetch(WEBHOOK_END, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'finish' })
+                });
+                if (res.ok) addLog("✅ Sesión cerrada. Generando plan de estudio...");
+            } catch (e) {
+                addLog(`❌ Error al cerrar: ${e.message}`);
             }
         }
 
@@ -188,7 +239,7 @@
                 const diff = Date.now() - startTime;
                 const secs = Math.floor(diff / 1000) % 60;
                 const mins = Math.floor(diff / 1000 / 60);
-                timerDisplay.innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+                timerDisplay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             }, 1000);
         }
 
@@ -203,6 +254,7 @@
                 recordBtn.innerText = "PARAR";
             } else {
                 isRecording = false;
+                clearInterval(chunkInterval);
                 mediaRecorder.stop();
                 clearInterval(timerInterval);
                 recordBtn.classList.remove('recording');
@@ -212,4 +264,5 @@
         });
     </script>
 </body>
+
 </html>

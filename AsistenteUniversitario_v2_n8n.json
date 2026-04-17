@@ -1,5 +1,5 @@
 {
-  "name": "Asistente Universitario Engine V2",
+  "name": "Asistente Universitario - GitHub Ready",
   "nodes": [
     {
       "parameters": {
@@ -10,36 +10,165 @@
           "binaryData": true
         }
       },
-      "id": "w1",
+      "id": "2af469fc-ecf1-48b3-a0d6-9a621ade5868",
       "name": "Webhook (From HTML)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        0,
-        200
+        336,
+        48
       ]
     },
     {
       "parameters": {
         "resource": "audio",
-        "operation": "transcriptions",
-        "binaryPropertyName": "data"
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-1.5-flash",
+          "mode": "list"
+        },
+        "prompt": "Transcribe exactamente lo que se dice en este audio de clase universitaria. Devuelve solo la transcripción sin comentarios adicionales.",
+        "inputType": "binary",
+        "simplify": false,
+        "options": {}
       },
-      "id": "w2",
-      "name": "Whisper STT",
-      "type": "n8n-nodes-base.openAi",
-      "typeVersion": 1,
+      "id": "e01c6fab-7e03-4123-aaa5-3ca39b1473c6",
+      "name": "Gemini (Transcribe)",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
       "position": [
-        250,
-        200
+        592,
+        48
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": "Clases",
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Estado",
+              "lookupValue": "Activa"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "554488b9-f620-42e7-b3b7-f8d2bca70c0d",
+      "name": "Get Current Class",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        800,
+        48
       ]
     },
     {
       "parameters": {
-        "operation": "lookup",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-1.5-flash",
+          "mode": "list"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Eres un experto redactando notas de estudio. Tu tarea es generar el NUEVO RESUMEN CONSOLIDADO a partir del RESUMEN ACTUAL y el TEXTO TRANSCRITO. Devuelve ÚNICAMENTE el resumen estructurado en Markdown, sin introducciones ni explicaciones.",
+              "role": "model"
+            },
+            {
+              "content": "RESUMEN ACTUAL:\n{{$node[\"Get Current Class\"].json.Resumen_Vivo}}\n\nNUEVO TEXTO TRANSCRITO:\n{{$node[\"Gemini (Transcribe)\"].json.text}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "705b02cb-3bd9-441c-9f01-eba8c5104ea9",
+      "name": "Gemini (Update Summary)",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        944,
+        48
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "TU_ID_DE_GOOGLE_SHEET",
+          "value": "={{ $env.SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": "Clases",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID_Clase": "={{ $node[\"Get Current Class\"].json.ID_Clase }}",
+            "Resumen_Vivo": "={{ $json.text }}"
+          },
+          "matchingColumns": [
+            "ID_Clase"
+          ]
+        },
+        "options": {}
+      },
+      "id": "90b6c88f-6e71-40e3-a249-47bfe842d086",
+      "name": "Update AppSheet Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1232,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ '✅ Fragmento guardado: ' + ($json.text?.substring(0, 100) || \"...\") }}",
+        "additionalFields": {}
+      },
+      "id": "dec21e11-c61e-4f2e-9c40-2786bc798d3d",
+      "name": "Telegram Notify",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "finalizar-clase",
+        "responseMode": "lastNode"
+      },
+      "id": "ac7015cd-8b4d-4b22-9c93-8590fc4b7d77",
+      "name": "Webhook (End Class)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        336,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.SHEET_ID }}",
           "mode": "id"
         },
         "sheetName": "Clases",
@@ -52,118 +181,88 @@
           ]
         }
       },
-      "id": "w3",
-      "name": "Get Current Class",
+      "id": "db85c1f9-1810-47e3-8f37-ab6b000957b8",
+      "name": "Get Final Summary",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        450,
-        200
+        496,
+        304
       ]
     },
     {
       "parameters": {
-        "resource": "chat",
-        "operation": "create",
-        "model": "gpt-4o-mini",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-1.5-flash",
+          "mode": "list"
+        },
         "messages": {
-          "messageValues": [
+          "values": [
             {
-              "role": "system",
-              "content": "Eres un asistente de estudio. Tu tarea es integrar un nuevo fragmento de clase al resumen existente sin repetir información y manteniendo estructura técnica."
+              "content": "Genera un plan de estudio de 5 días basado en el resumen final. Devuelve un texto claro en Markdown.",
+              "role": "system"
             },
             {
-              "content": "RESUMEN ACTUAL:\n{{$node[\"Get Current Class\"].json.Resumen_Vivo}}\n\nNUEVO TEXTO TRANSCRITO:\n{{$node[\"Whisper STT\"].json.text}}"
+              "content": "RESUMEN DE LA CLASE:\n{{$node[\"Get Final Summary\"].json.Resumen_Vivo}}"
             }
           ]
-        }
+        },
+        "options": {}
       },
-      "id": "w4",
-      "name": "GPT (Update Summary)",
-      "type": "n8n-nodes-base.openAi",
-      "typeVersion": 1,
+      "id": "adffbb08-5ad8-4022-9877-ebae999afd73",
+      "name": "Gemini (Master Plan)",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
       "position": [
-        650,
-        200
-      ]
+        640,
+        304
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
     },
     {
       "parameters": {
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "TU_ID_DE_GOOGLE_SHEET",
+          "value": "={{ $env.SHEET_ID }}",
           "mode": "id"
         },
         "sheetName": "Clases",
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "ID_Clase": "={{$node[\"Get Current Class\"].json.ID_Clase}}",
-            "Resumen_Vivo": "={{$json.message.content}}"
-          }
-        }
-      },
-      "id": "w5",
-      "name": "Update AppSheet Sheet",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
-      "position": [
-        850,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "finalizar-clase",
-        "responseMode": "lastNode"
-      },
-      "id": "fin1",
-      "name": "Webhook (End Class)",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [
-        0,
-        450
-      ]
-    },
-    {
-      "parameters": {
-        "resource": "chat",
-        "operation": "create",
-        "model": "gpt-4o",
-        "responseFormat": "json_object",
-        "messages": {
-          "messageValues": [
-            {
-              "role": "system",
-              "content": "Genera un JSON con plan de estudio de 5 días y resumen final basado en el texto proporcionado."
-            }
+            "ID_Clase": "={{$node[\"Get Final Summary\"].json.ID_Clase}}",
+            "Estado": "Finalizada"
+          },
+          "matchingColumns": [
+            "ID_Clase"
           ]
         }
       },
-      "id": "fin2",
-      "name": "GPT (Master Plan)",
-      "type": "n8n-nodes-base.openAi",
-      "typeVersion": 1,
+      "id": "045ff429-2e50-4941-9040-7da69aab1079",
+      "name": "Close Class in Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
       "position": [
-        250,
-        450
+        1008,
+        304
       ]
     },
     {
       "parameters": {
-        "chatId": "TU_CHAT_ID_DE_TELEGRAM",
-        "text": "={{'✅ Fragmento de clase guardado. Temas detectados: ' + $node[\"GPT (Update Summary)\"].json.message.content.substring(0, 50) + '...'}}"
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{'📚 ¡Plan de Estudio!\\n\\n' + $node[\"Gemini (Master Plan)\"].json.text}}",
+        "additionalFields": {}
       },
-      "id": "tel1",
-      "name": "Telegram Notify",
+      "id": "6a51b09e-da4d-4115-8416-10f56411264d",
+      "name": "Telegram Notify Plan",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
       "position": [
-        1050,
-        200
+        1216,
+        304
       ]
     }
   ],
@@ -172,14 +271,14 @@
       "main": [
         [
           {
-            "node": "Whisper STT",
+            "node": "Gemini (Transcribe)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Whisper STT": {
+    "Gemini (Transcribe)": {
       "main": [
         [
           {
@@ -194,14 +293,14 @@
       "main": [
         [
           {
-            "node": "GPT (Update Summary)",
+            "node": "Gemini (Update Summary)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "GPT (Update Summary)": {
+    "Gemini (Update Summary)": {
       "main": [
         [
           {
@@ -217,6 +316,50 @@
         [
           {
             "node": "Telegram Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook (End Class)": {
+      "main": [
+        [
+          {
+            "node": "Get Final Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Final Summary": {
+      "main": [
+        [
+          {
+            "node": "Gemini (Master Plan)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini (Master Plan)": {
+      "main": [
+        [
+          {
+            "node": "Close Class in Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Close Class in Sheets": {
+      "main": [
+        [
+          {
+            "node": "Telegram Notify Plan",
             "type": "main",
             "index": 0
           }
