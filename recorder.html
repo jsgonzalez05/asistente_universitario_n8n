@@ -147,10 +147,10 @@
         let fragmentCount = 1;
 
         // --- CONFIGURACIÓN ---
-        const BASE_URL = 'http://localhost:5678/webhook-test';
+        const BASE_URL = 'http://localhost:5678/webhook';
         const WEBHOOK_FRAGMENT = BASE_URL + '/clase-audio-upload';
         const WEBHOOK_END = BASE_URL + '/finalizar-clase';
-        const CHUNK_TIME_MS = 10 * 1000; // 10 segundos (para pruebas)
+        const CHUNK_TIME_MS = 15 * 1000; // 15 segundos (Para evitar límites de cuota)
         // ---------------------
 
         const recordBtn = document.getElementById('recordBtn');
@@ -176,32 +176,60 @@
 
             mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                sendToN8n(audioBlob, fragmentCount);
+                
+                // Solo enviar si el fragmento tiene contenido real
+                if (audioBlob.size > 1000) { 
+                    sendToN8n(audioBlob, fragmentCount);
+                }
+                
                 audioChunks = [];
-
+ 
                 if (isRecording) {
                     addLog("Reiniciando nuevo bloque...");
                     fragmentCount++;
                     mediaRecorder.start();
                     resetTimer();
                 } else {
-                    addLog("Grabación detenida. Cerrando sesión...");
+                    addLog("Grabación completada con éxito. Cerrando sesión...");
                     finalizeClass();
                 }
             };
-
+ 
             mediaRecorder.start();
             isRecording = true;
             statusDisplay.innerText = "GRABANDO FRAGMENTO #" + fragmentCount;
             addLog("Grabación iniciada.");
             startTimer();
-
-            // Ciclo de auto-corte cada X ms
+ 
+            // Ciclo de auto-corte cada 15s
             chunkInterval = setInterval(() => {
                 if (isRecording && mediaRecorder.state === "recording") {
-                    mediaRecorder.stop();
+                    // Si ya enviamos 2 fragmentos (30s), esperamos 5s más para el final total
+                    if (fragmentCount < 2) {
+                        mediaRecorder.stop();
+                    }
+                    // A los 30s el intervalo no hace nada, dejamos que el setTimeout de 35s haga el cierre total
                 }
             }, CHUNK_TIME_MS);
+ 
+            // PARADA AUTOMÁTICA TOTAL A LOS 35 SEGUNDOS
+            setTimeout(() => {
+                if (isRecording) {
+                    addLog("Tiempo total alcanzado (35s). Deteniendo grabación final...");
+                    isRecording = false; // Detenemos el reinicio antes de parar
+                    if (mediaRecorder.state !== "inactive") mediaRecorder.stop();
+                    stopRecordingManual();
+                }
+            }, 35000);
+        }
+ 
+        function stopRecordingManual() {
+            isRecording = false;
+            clearInterval(chunkInterval);
+            clearInterval(timerInterval);
+            recordBtn.classList.remove('recording');
+            recordBtn.innerText = "INICIAR";
+            statusDisplay.innerText = "Finalizado automáticamente.";
         }
 
         async function sendToN8n(blob, index) {
@@ -249,17 +277,12 @@
 
         recordBtn.addEventListener('click', () => {
             if (!isRecording) {
+                fragmentCount = 1; // Reiniciar cuenta
                 startRecording();
                 recordBtn.classList.add('recording');
                 recordBtn.innerText = "PARAR";
             } else {
-                isRecording = false;
-                clearInterval(chunkInterval);
-                mediaRecorder.stop();
-                clearInterval(timerInterval);
-                recordBtn.classList.remove('recording');
-                recordBtn.innerText = "INICIAR";
-                statusDisplay.innerText = "Finalizado.";
+                stopRecordingManual();
             }
         });
     </script>
