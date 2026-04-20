@@ -1,291 +1,298 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Smart Recorder | Asistente Universitario</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        :root {
-            --primary: #6366f1;
-            --bg: #0f172a;
-            --card: #1e293b;
-            --text: #f8fafc;
+      :root {
+        --primary: #6366f1;
+        --bg: #0f172a;
+        --card: #1e293b;
+        --text: #f8fafc;
+      }
+
+      body {
+        font-family: "Outfit", sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      .container {
+        background: var(--card);
+        padding: 2rem;
+        border-radius: 24px;
+        box-shadow:
+          0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        text-align: center;
+        width: 90%;
+        max-width: 400px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      h1 {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(to right, #818cf8, #c084fc);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      p {
+        color: #94a3b8;
+        font-size: 0.9rem;
+        margin-bottom: 2rem;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.05);
+        font-size: 0.8rem;
+        margin-bottom: 2rem;
+      }
+
+      .record-btn {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: none;
+        background: var(--primary);
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+      }
+
+      .record-btn.recording {
+        background: #ef4444;
+        animation: pulse-red 2s infinite;
+      }
+
+      .timer {
+        font-size: 2.5rem;
+        font-weight: 300;
+        margin: 1.5rem 0;
+        color: #f1f5f9;
+      }
+
+      .log {
+        margin-top: 1.5rem;
+        font-size: 0.75rem;
+        color: #64748b;
+        max-height: 80px;
+        overflow-y: auto;
+        text-align: left;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 10px;
+        border-radius: 12px;
+      }
+
+      @keyframes pulse-red {
+        0% {
+          transform: scale(0.95);
+          box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
         }
 
-        body {
-            font-family: 'Outfit', sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            overflow: hidden;
+        70% {
+          transform: scale(1);
+          box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
         }
 
-        .container {
-            background: var(--card);
-            padding: 2rem;
-            border-radius: 24px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            text-align: center;
-            width: 90%;
-            max-width: 400px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        100% {
+          transform: scale(0.95);
+          box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
         }
-
-        h1 {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(to right, #818cf8, #c084fc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        p {
-            color: #94a3b8;
-            font-size: 0.9rem;
-            margin-bottom: 2rem;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            border-radius: 99px;
-            background: rgba(255, 255, 255, 0.05);
-            font-size: 0.8rem;
-            margin-bottom: 2rem;
-        }
-
-        .record-btn {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            border: none;
-            background: var(--primary);
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto;
-        }
-
-        .record-btn.recording {
-            background: #ef4444;
-            animation: pulse-red 2s infinite;
-        }
-
-        .timer {
-            font-size: 2.5rem;
-            font-weight: 300;
-            margin: 1.5rem 0;
-            color: #f1f5f9;
-        }
-
-        .log {
-            margin-top: 1.5rem;
-            font-size: 0.75rem;
-            color: #64748b;
-            max-height: 80px;
-            overflow-y: auto;
-            text-align: left;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 10px;
-            border-radius: 12px;
-        }
-
-        @keyframes pulse-red {
-            0% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-            }
-
-            70% {
-                transform: scale(1);
-                box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
-            }
-
-            100% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
-            }
-        }
+      }
     </style>
-</head>
+  </head>
 
-<body>
-
+  <body>
     <div class="container">
-        <h1>Clase en Vivo</h1>
-        <p>Grabación automatizada en bloques de 15 min.</p>
+      <h1>Clase en Vivo</h1>
+      <p>Grabación automatizada en bloques de 15 min.</p>
 
-        <div id="status" class="status-badge">Esperando inicio...</div>
+      <div id="status" class="status-badge">Esperando inicio...</div>
 
-        <div class="timer" id="timer">00:00</div>
+      <div class="timer" id="timer">00:00</div>
 
-        <button id="recordBtn" class="record-btn">INICIAR</button>
+      <button id="recordBtn" class="record-btn">INICIAR</button>
 
-        <div class="log" id="log">
-            <div>> Sistema listo.</div>
-        </div>
+      <div class="log" id="log">
+        <div>> Sistema listo.</div>
+      </div>
     </div>
 
     <script>
-        let mediaRecorder;
-        let audioChunks = [];
-        let isRecording = false;
-        let startTime;
-        let timerInterval;
-        let fragmentCount = 1;
+      let mediaRecorder;
+      let audioChunks = [];
+      let isRecording = false;
+      let startTime;
+      let timerInterval;
+      let fragmentCount = 1;
 
-        // --- CONFIGURACIÓN ---
-        const BASE_URL = 'http://localhost:5678/webhook';
-        const WEBHOOK_FRAGMENT = BASE_URL + '/clase-audio-upload';
-        const WEBHOOK_END = BASE_URL + '/finalizar-clase';
-        const CHUNK_TIME_MS = 15 * 1000; // 15 segundos (Para evitar límites de cuota)
-        // ---------------------
+      // --- CONFIGURACIÓN ---
+      const BASE_URL = "http://localhost:5678/webhook";
+      const WEBHOOK_FRAGMENT = BASE_URL + "/clase-audio-upload";
+      const WEBHOOK_END = BASE_URL + "/finalizar-clase";
+      const CHUNK_TIME_MS = 15 * 1000; // 15 segundos (Para evitar límites de cuota)
+      // ---------------------
 
-        const recordBtn = document.getElementById('recordBtn');
-        const timerDisplay = document.getElementById('timer');
-        const statusDisplay = document.getElementById('status');
-        const logDisplay = document.getElementById('log');
+      const recordBtn = document.getElementById("recordBtn");
+      const timerDisplay = document.getElementById("timer");
+      const statusDisplay = document.getElementById("status");
+      const logDisplay = document.getElementById("log");
 
-        function addLog(msg) {
-            const div = document.createElement('div');
-            div.innerText = `> ${msg}`;
-            logDisplay.prepend(div);
-        }
+      function addLog(msg) {
+        const div = document.createElement("div");
+        div.innerText = `> ${msg}`;
+        logDisplay.prepend(div);
+      }
 
-        let chunkInterval;
+      let chunkInterval;
 
-        async function startRecording() {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-
-            mediaRecorder.ondataavailable = (event) => {
-                audioChunks.push(event.data);
-            };
-
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                
-                // Solo enviar si el fragmento tiene contenido real
-                if (audioBlob.size > 1000) { 
-                    sendToN8n(audioBlob, fragmentCount);
-                }
-                
-                audioChunks = [];
- 
-                if (isRecording) {
-                    addLog("Reiniciando nuevo bloque...");
-                    fragmentCount++;
-                    mediaRecorder.start();
-                    resetTimer();
-                } else {
-                    addLog("Grabación completada con éxito. Cerrando sesión...");
-                    finalizeClass();
-                }
-            };
- 
-            mediaRecorder.start();
-            isRecording = true;
-            statusDisplay.innerText = "GRABANDO FRAGMENTO #" + fragmentCount;
-            addLog("Grabación iniciada.");
-            startTimer();
- 
-            // Ciclo de auto-corte cada 15s
-            chunkInterval = setInterval(() => {
-                if (isRecording && mediaRecorder.state === "recording") {
-                    // Si ya enviamos 2 fragmentos (30s), esperamos 5s más para el final total
-                    if (fragmentCount < 2) {
-                        mediaRecorder.stop();
-                    }
-                    // A los 30s el intervalo no hace nada, dejamos que el setTimeout de 35s haga el cierre total
-                }
-            }, CHUNK_TIME_MS);
- 
-            // PARADA AUTOMÁTICA TOTAL A LOS 35 SEGUNDOS
-            setTimeout(() => {
-                if (isRecording) {
-                    addLog("Tiempo total alcanzado (35s). Deteniendo grabación final...");
-                    isRecording = false; // Detenemos el reinicio antes de parar
-                    if (mediaRecorder.state !== "inactive") mediaRecorder.stop();
-                    stopRecordingManual();
-                }
-            }, 35000);
-        }
- 
-        function stopRecordingManual() {
-            isRecording = false;
-            clearInterval(chunkInterval);
-            clearInterval(timerInterval);
-            recordBtn.classList.remove('recording');
-            recordBtn.innerText = "INICIAR";
-            statusDisplay.innerText = "Finalizado automáticamente.";
-        }
-
-        async function sendToN8n(blob, index) {
-            addLog(`Enviando fragmento #${index} a n8n...`);
-            try {
-                // Enviamos el audio puro para que Gemini lo acepte correctamente
-                const res = await fetch(WEBHOOK_FRAGMENT, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'audio/webm' },
-                    body: blob
-                });
-                if (res.ok) addLog(`✅ Fragmento #${index} guardado.`);
-            } catch (e) {
-                addLog(`❌ Error enviando: ${e.message}`);
-            }
-        }
-
-        async function finalizeClass() {
-            addLog("Finalizando sesión de clase en n8n...");
-            try {
-                const res = await fetch(WEBHOOK_END, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'finish' })
-                });
-                if (res.ok) addLog("✅ Sesión cerrada. Generando plan de estudio...");
-            } catch (e) {
-                addLog(`❌ Error al cerrar: ${e.message}`);
-            }
-        }
-
-        function startTimer() {
-            startTime = Date.now();
-            timerInterval = setInterval(() => {
-                const diff = Date.now() - startTime;
-                const secs = Math.floor(diff / 1000) % 60;
-                const mins = Math.floor(diff / 1000 / 60);
-                timerDisplay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-            }, 1000);
-        }
-
-        function resetTimer() {
-            startTime = Date.now();
-        }
-
-        recordBtn.addEventListener('click', () => {
-            if (!isRecording) {
-                fragmentCount = 1; // Reiniciar cuenta
-                startRecording();
-                recordBtn.classList.add('recording');
-                recordBtn.innerText = "PARAR";
-            } else {
-                stopRecordingManual();
-            }
+      async function startRecording() {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
         });
-    </script>
-</body>
+        mediaRecorder = new MediaRecorder(stream);
 
+        mediaRecorder.ondataavailable = (event) => {
+          audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+
+          // Solo enviar si el fragmento tiene contenido real
+          if (audioBlob.size > 1000) {
+            sendToN8n(audioBlob, fragmentCount);
+          }
+
+          audioChunks = [];
+
+          if (isRecording) {
+            addLog("Reiniciando nuevo bloque...");
+            fragmentCount++;
+            mediaRecorder.start();
+            resetTimer();
+          } else {
+            addLog("Grabación completada con éxito. Cerrando sesión...");
+            finalizeClass();
+          }
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        statusDisplay.innerText = "GRABANDO FRAGMENTO #" + fragmentCount;
+        addLog("Grabación iniciada.");
+        startTimer();
+
+        // Ciclo de auto-corte cada 15s
+        chunkInterval = setInterval(() => {
+          if (isRecording && mediaRecorder.state === "recording") {
+            // Si ya enviamos 2 fragmentos (30s), esperamos 5s más para el final total
+            if (fragmentCount < 2) {
+              mediaRecorder.stop();
+            }
+            // A los 30s el intervalo no hace nada, dejamos que el setTimeout de 35s haga el cierre total
+          }
+        }, CHUNK_TIME_MS);
+
+        // PARADA AUTOMÁTICA TOTAL A LOS 35 SEGUNDOS
+        setTimeout(() => {
+          if (isRecording) {
+            addLog(
+              "Tiempo total alcanzado (35s). Deteniendo grabación final...",
+            );
+            isRecording = false; // Detenemos el reinicio antes de parar
+            if (mediaRecorder.state !== "inactive") mediaRecorder.stop();
+            stopRecordingManual();
+          }
+        }, 35000);
+      }
+
+      function stopRecordingManual() {
+        isRecording = false;
+        clearInterval(chunkInterval);
+        clearInterval(timerInterval);
+        recordBtn.classList.remove("recording");
+        recordBtn.innerText = "INICIAR";
+        statusDisplay.innerText = "Finalizado automáticamente.";
+        finalizeClass();
+      }
+
+      async function sendToN8n(blob, index) {
+        addLog(`Enviando fragmento #${index} a n8n...`);
+        try {
+          // Enviamos el audio puro para que Gemini lo acepte correctamente
+          const res = await fetch(WEBHOOK_FRAGMENT, {
+            method: "POST",
+            headers: { "Content-Type": "audio/webm" },
+            body: blob,
+          });
+          if (res.ok) addLog(`✅ Fragmento #${index} guardado.`);
+        } catch (e) {
+          addLog(`❌ Error enviando: ${e.message}`);
+        }
+      }
+
+      async function finalizeClass() {
+        addLog("Finalizando sesión de clase en n8n...");
+        try {
+          const res = await fetch(WEBHOOK_END, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "finish" }),
+          });
+          if (res.ok) addLog("✅ Sesión cerrada. Generando plan de estudio...");
+        } catch (e) {
+          addLog(`❌ Error al cerrar: ${e.message}`);
+        }
+      }
+
+      function startTimer() {
+        startTime = Date.now();
+        timerInterval = setInterval(() => {
+          const diff = Date.now() - startTime;
+          const secs = Math.floor(diff / 1000) % 60;
+          const mins = Math.floor(diff / 1000 / 60);
+          timerDisplay.innerText = `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+        }, 1000);
+      }
+
+      function resetTimer() {
+        startTime = Date.now();
+      }
+
+      recordBtn.addEventListener("click", () => {
+        if (!isRecording) {
+          fragmentCount = 1; // Reiniciar cuenta
+          startRecording();
+          recordBtn.classList.add("recording");
+          recordBtn.innerText = "PARAR";
+        } else {
+          stopRecordingManual();
+        }
+      });
+    </script>
+  </body>
 </html>

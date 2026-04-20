@@ -1,0 +1,622 @@
+{
+  "name": "Asistente Universitario V1",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clase-audio-upload",
+        "responseMode": "lastNode",
+        "options": {
+          "binaryData": true
+        }
+      },
+      "id": "02529f21-300d-4a3a-8b12-2ada01cdf13b",
+      "name": "Webhook (From HTML)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "0e951db7-93a5-4e15-92df-113d71eff35c"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash-lite",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash-lite"
+        },
+        "text": "Transcribe este audio palabra por palabra.",
+        "inputType": "binary",
+        "options": {}
+      },
+      "id": "d7d47ff9-8c5e-42d5-98c4-4237301bff13",
+      "name": "Gemini (Transcribe)",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "3k4rxK67yPxm03jN",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1lUZOf1qvBJpFwbZgXcL2r9VmxTZ7JyQRIpqr6AHcwHo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Clases",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Estado",
+              "lookupValue": "Activa"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f059e343-85e6-4732-876e-07b5ffdb324f",
+      "name": "Get Current Class",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        480,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xrlvi4a3yuD220oB",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Eres un asistente de estudio. Tu tarea es integrar un nuevo fragmento de clase al resumen existente sin repetir información y manteniendo estructura técnica. DEVUELVE SOLO EL TEXTO PLANO.",
+              "role": "model"
+            },
+            {
+              "content": "=RESUMEN ACTUAL:\n{{ $node[\"Get Current Class\"].json.Resumen_Vivo || 'Inicio de clase' }}\n\nNUEVO TEXTO TRANSCRITO:\n{{ $node[\"Gemini (Transcribe)\"].json.content.parts[0].text }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "316489fa-7c48-4430-923f-b15c7389f13a",
+      "name": "Gemini (Update Summary)",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        848,
+        -16
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "3k4rxK67yPxm03jN",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1lUZOf1qvBJpFwbZgXcL2r9VmxTZ7JyQRIpqr6AHcwHo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Clases",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID_Clase": "={{ $node[\"Get Current Class\"].json.ID_Clase }}",
+            "Resumen_Vivo": "={{ $node[\"Gemini (Update Summary)\"].json.candidates[0].content.parts[0].text }}"
+          },
+          "matchingColumns": [
+            "ID_Clase"
+          ],
+          "schema": [
+            {
+              "id": "ID_Clase",
+              "displayName": "ID_Clase",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Materia",
+              "displayName": "Materia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Resumen_Vivo",
+              "displayName": "Resumen_Vivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f40cc4f1-60ec-498a-b641-d89c55c3b583",
+      "name": "Update AppSheet Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1408,
+        -16
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xrlvi4a3yuD220oB",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "finalizar-clase",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "577d7ce8-1d99-4d64-ae02-2004d2c9cb01",
+      "name": "Webhook (End Class)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        256
+      ],
+      "webhookId": "9b1e0e88-bc74-428b-8989-c36505cf7ed4"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1lUZOf1qvBJpFwbZgXcL2r9VmxTZ7JyQRIpqr6AHcwHo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Clases",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Estado",
+              "lookupValue": "Activa"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "388a001d-bdb8-45b1-b3ca-c564fe4b442d",
+      "name": "Get Final Summary",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        224,
+        256
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xrlvi4a3yuD220oB",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Eres un experto en pedagogía universitaria. Basándote EXCLUSIVAMENTE en el resumen de clase proporcionado, genera un plan de estudio detallado de 5 días. \n\nPara cada día incluye:\n- Tema principal a estudiar\n- Conceptos clave a repasar\n- Actividades concretas de estudio\n- Tiempo estimado\n\nSé específico con el contenido del resumen. No inventes temas que no estén en el resumen. Escribe en español y sin usar Markdown IMPORTANTE QUE EL TEXTO QUE GENERES NO TENGA MÁS DE 3900 caracteres.",
+              "role": "model"
+            },
+            {
+              "content": "=RESUMEN DE LA CLASE:\n{{ $node[\"Get Final Summary\"].json.Resumen_Vivo }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "21e71a4e-b813-4e75-afd0-bbd615b3a4e8",
+      "name": "Gemini (Master Plan)",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        752,
+        256
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "WoO84I2oiShDkjJW",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "7292282174",
+        "text": "={{'📚 ¡Plan de Estudio Generado!\\n\\n' + $node[\"Gemini (Master Plan)\"].json.content.parts[0].text.replace(/[*_`#\\[\\]()]/g, '').substring(0, 3900)}}",
+        "additionalFields": {}
+      },
+      "id": "a5b6316d-732c-41dd-a3d4-2c4e309be9b6",
+      "name": "Telegram Notify Plan",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1088,
+        256
+      ],
+      "webhookId": "299ff902-4a0a-421f-8741-346bb4a50dc8",
+      "credentials": {
+        "telegramApi": {
+          "id": "IFr805OVLdRCBB5A",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1lUZOf1qvBJpFwbZgXcL2r9VmxTZ7JyQRIpqr6AHcwHo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Clases",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID_Clase": "={{ $node[\"Get Final Summary\"].json.ID_Clase }}",
+            "Estado": "Finalizada"
+          },
+          "matchingColumns": [
+            "ID_Clase"
+          ],
+          "schema": [
+            {
+              "id": "ID_Clase",
+              "displayName": "ID_Clase",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Materia",
+              "displayName": "Materia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Resumen_Vivo",
+              "displayName": "Resumen_Vivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e4059688-02b3-40a2-a9b6-401dc81b8568",
+      "name": "Close Class in Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1488,
+        256
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xrlvi4a3yuD220oB",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "42191e5d-92b4-4705-9489-632fa5684c4d",
+              "leftValue": "={{ $json.Estado }}",
+              "rightValue": "Activa",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        464,
+        288
+      ],
+      "id": "7fada5d4-758b-47ba-8d37-226d0a542129",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "7292282174",
+        "text": "❌ No hay clases activas en este momento.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        768,
+        464
+      ],
+      "id": "b8cc7ed7-678f-4aa9-8bd8-8a71b043e3ae",
+      "name": "Send a text message",
+      "webhookId": "9a958a24-fb52-4074-a702-529d40296b5f",
+      "credentials": {
+        "telegramApi": {
+          "id": "IFr805OVLdRCBB5A",
+          "name": "Telegram account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook (From HTML)": {
+      "main": [
+        [
+          {
+            "node": "Gemini (Transcribe)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini (Transcribe)": {
+      "main": [
+        [
+          {
+            "node": "Get Current Class",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Current Class": {
+      "main": [
+        [
+          {
+            "node": "Gemini (Update Summary)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini (Update Summary)": {
+      "main": [
+        [
+          {
+            "node": "Update AppSheet Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook (End Class)": {
+      "main": [
+        [
+          {
+            "node": "Get Final Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Final Summary": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini (Master Plan)": {
+      "main": [
+        [
+          {
+            "node": "Telegram Notify Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Close Class in Sheets": {
+      "main": [
+        []
+      ]
+    },
+    "Telegram Notify Plan": {
+      "main": [
+        [
+          {
+            "node": "Close Class in Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Gemini (Master Plan)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "61c5e877-1369-48dc-850a-d6e1f9204e4d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "44aac186c54d01972c9106a996d0028255d6806fe27f6c9da7482ffa13f130b3"
+  },
+  "id": "Q90GlP5xLWdR2jpt",
+  "tags": []
+}
